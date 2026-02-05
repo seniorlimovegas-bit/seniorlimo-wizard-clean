@@ -1,16 +1,15 @@
 export default async function handler(req, res) {
-  // Allow only POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { message } = req.body || {};
-
-  if (!message) {
-    return res.status(400).json({ error: "No message provided" });
-  }
-
   try {
+    const { message } = req.body || {};
+
+    if (!message) {
+      return res.status(400).json({ error: "No message provided" });
+    }
+
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -23,7 +22,7 @@ export default async function handler(req, res) {
           {
             role: "system",
             content:
-              "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, patiently, and help seniors feel supported.",
+              "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and helpfully.",
           },
           {
             role: "user",
@@ -36,13 +35,12 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     const reply =
-      data.output_text ||
       data.output?.[0]?.content?.[0]?.text ||
-      "Sorry, I didn’t get a response.";
+      "Mr. Wizard is listening, but needs a moment.";
 
     return res.status(200).json({ reply });
   } catch (error) {
-    console.error("Chat API error:", error);
-    return res.status(500).json({ error: "Server error" });
+    console.error("API ERROR:", error);
+    return res.status(500).json({ error: "Something went wrong" });
   }
 }
