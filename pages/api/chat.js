@@ -42,17 +42,21 @@ export default async function handler(req, res) {
               content: [
                 {
                   type: "text",
-                  text:
-                    "You are Mr. Wizard — a calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and helpfully.",
+                  text: "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and helpfully.",
                 },
               ],
             },
             {
               role: "user",
-              content: [{ type: "text", text: message }],
+              content: [
+                {
+                  type: "text",
+                  text: message,
+                },
+              ],
             },
           ],
-          max_output_tokens: 300,
+          max_output_tokens: 250,
         }),
       }
     );
@@ -60,14 +64,14 @@ export default async function handler(req, res) {
     const data = await openaiResponse.json();
 
     if (!openaiResponse.ok) {
-      console.error("OpenAI API error:", data);
+      console.error("OpenAI error:", data);
       return res.status(500).json({ error: "OpenAI request failed" });
     }
 
     const reply =
       data.output_text ||
       data.output?.[0]?.content?.[0]?.text ||
-      "Mr. Wizard is thinking…";
+      "No response";
 
     return res.status(200).json({ reply });
   } catch (err) {
