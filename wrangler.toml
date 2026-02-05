@@ -1,1 +1,4 @@
+name = "seniorlimo-wizard-clean"
 
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
