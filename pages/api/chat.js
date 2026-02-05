@@ -11,40 +11,38 @@ export default async function handler(req, res) {
   }
 
   try {
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // This must be set in Vercel Environment Variables
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0.4,
-        messages: [
+        model: "gpt-4.1-mini",
+        input: [
           {
             role: "system",
             content:
-              "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, patiently, and reassuringly. Keep answers short and helpful. If you don’t know something, say so and offer next steps.",
+              "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, patiently, and help seniors feel supported.",
           },
-          { role: "user", content: message },
+          {
+            role: "user",
+            content: message,
+          },
         ],
       }),
     });
 
-    const data = await r.json();
+    const data = await response.json();
 
-    // If OpenAI returns an error, pass it through cleanly
-    if (!r.ok) {
-      return res.status(r.status).json({
-        error: data?.error?.message || "OpenAI request failed",
-      });
-    }
-
-    const reply = data?.choices?.[0]?.message?.content?.trim() || "…";
+    const reply =
+      data.output_text ||
+      data.output?.[0]?.content?.[0]?.text ||
+      "Sorry, I didn’t get a response.";
 
     return res.status(200).json({ reply });
-  } catch (err) {
-    return res.status(500).json({ error: "Wizard brain error" });
+  } catch (error) {
+    console.error("Chat API error:", error);
+    return res.status(500).json({ error: "Server error" });
   }
 }
