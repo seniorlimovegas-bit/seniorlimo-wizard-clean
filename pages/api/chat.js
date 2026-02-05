@@ -1,7 +1,7 @@
 // pages/api/chat.js
 
 export default async function handler(req, res) {
-  // Health check
+  // ===== Health check =====
   if (req.method === "GET") {
     return res.status(200).json({
       ok: true,
@@ -15,10 +15,13 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log("🔥 POST /api/chat hit");
+
     const { message } = req.body || {};
+    console.log("📨 Incoming message:", message);
 
     if (!message || typeof message !== "string") {
-      return res.status(400).json({ error: "Invalid message" });
+      return res.status(400).json({ error: "Invalid message payload" });
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
@@ -36,32 +39,15 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           model: "gpt-4.1-mini",
-          input: [
-            {
-              role: "system",
-              content:
-                "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and helpfully.",
-            },
-            {
-              role: "user",
-              content: message,
-            },
-          ],
-          output: [
-            {
-              type: "message",
-              role: "assistant",
-            },
-          ],
-          max_output_tokens: 300,
+          input: message,
         }),
       }
     );
 
     const data = await openaiResponse.json();
+    console.log("🧠 OpenAI raw response:", data);
 
     if (!openaiResponse.ok) {
-      console.error("OpenAI error:", data);
       return res.status(500).json({
         error: "OpenAI request failed",
         details: data,
@@ -69,12 +55,16 @@ export default async function handler(req, res) {
     }
 
     const reply =
+      data.output_text ||
       data.output?.[0]?.content?.[0]?.text ||
-      "Mr. Wizard is listening, but something went quiet.";
+      "No response text returned";
 
     return res.status(200).json({ reply });
   } catch (err) {
-    console.error("Server error:", err);
-    return res.status(500).json({ error: "Server error" });
+    console.error("💥 API crash:", err);
+    return res.status(500).json({
+      error: "Server crash",
+      message: err.message,
+    });
   }
 }
