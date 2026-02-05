@@ -1,4 +1,5 @@
 export default async function handler(req, res) {
+  // Allow POST only
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -22,7 +23,7 @@ export default async function handler(req, res) {
           {
             role: "system",
             content:
-              "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and helpfully.",
+              "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, patiently, and warmly. Be helpful, concise, and reassuring.",
           },
           {
             role: "user",
@@ -36,11 +37,11 @@ export default async function handler(req, res) {
 
     const reply =
       data.output?.[0]?.content?.[0]?.text ||
-      "Mr. Wizard is listening, but needs a moment.";
+      "Mr. Wizard is awake, but didn’t receive a clear response. Please try again.";
 
     return res.status(200).json({ reply });
   } catch (error) {
-    console.error("API ERROR:", error);
-    return res.status(500).json({ error: "Something went wrong" });
+    console.error("Chat API error:", error);
+    return res.status(500).json({ error: "Server error" });
   }
 }
