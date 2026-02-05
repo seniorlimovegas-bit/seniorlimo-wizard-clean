@@ -1,7 +1,7 @@
-// pages/api/chat.js
+ // pages/api/chat.js
 
 export default async function handler(req, res) {
-  // ---- Health check (browser-safe) ----
+  // Health check
   if (req.method === "GET") {
     return res.status(200).json({
       ok: true,
@@ -11,7 +11,6 @@ export default async function handler(req, res) {
     });
   }
 
-  // ---- POST only ----
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -22,10 +21,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing message" });
     }
 
-    const openaiRes = await fetch("https://api.openai.com/v1/responses", {
+    const r = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -34,40 +33,45 @@ export default async function handler(req, res) {
       }),
     });
 
-    const data = await openaiRes.json();
+    const data = await r.json();
 
-    if (!openaiRes.ok) {
-      return res.status(openaiRes.status).json({
-        error: "OpenAI request failed",
+    // HARD ERROR FROM OPENAI → RETURN IT VERBATIM
+    if (!r.ok) {
+      return res.status(r.status).json({
+        error: "OpenAI error",
         details: data,
       });
     }
 
-    // ---- Extract text safely ----
+    // Extract text safely
     let reply = "";
 
     if (typeof data.output_text === "string") {
       reply = data.output_text;
     } else if (Array.isArray(data.output)) {
       for (const item of data.output) {
-        if (Array.isArray(item.content)) {
-          for (const block of item.content) {
-            if (typeof block.text === "string") {
-              reply += block.text;
-            }
+        for (const block of item.content || []) {
+          if (typeof block.text === "string") {
+            reply += block.text + "\n";
           }
         }
       }
     }
 
-    return res.status(200).json({
-      reply: reply || "No reply",
-    });
+    reply = reply.trim();
 
+    if (!reply) {
+      return res.status(500).json({
+        error: "No text returned from OpenAI",
+        raw: data,
+      });
+    }
+
+    return res.status(200).json({ reply });
   } catch (err) {
     return res.status(500).json({
       error: "Server exception",
-      message: err?.message || String(err),
+      message: err.message,
     });
   }
 }
