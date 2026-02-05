@@ -9,49 +9,61 @@ export default async function handler(req, res) {
   try {
     const { message } = req.body || {};
 
-    if (!message || typeof message !== "string") {
+    // Validate input
+    if (!message || typeof message !== "string" || !message.trim()) {
       return res.status(400).json({ error: "No message provided" });
+    }
+
+    // Make sure the key exists in the server environment (NOT on the client)
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({
+        error: "Missing OPENAI_API_KEY in environment variables",
+      });
     }
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: "gpt-4.1-mini",
-        input: [
-          {
-            role: "system",
-            content:
-              "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and in short helpful responses. If asked about SeniorLimo or Gold Deals, explain simply and invite a follow-up question.",
-          },
-          { role: "user", content: message },
-        ],
+        // Put the “system” persona in instructions (cleanest for Responses API)
+        instructions:
+          "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and patiently. Keep answers helpful and easy to understand.",
+        input: message,
+        max_output_tokens: 250,
       }),
     });
 
     // If OpenAI returns an error, pass it back clearly
     if (!response.ok) {
       const errText = await response.text();
-      return res.status(500).json({
+      console.error("OpenAI error:", response.status, errText);
+      return res.status(response.status).json({
         error: "OpenAI request failed",
-        status: response.status,
         details: errText,
       });
     }
 
     const data = await response.json();
 
-    // Safest extraction for Responses API text output
+    // Best-effort extraction across response shapes
     const reply =
-      data?.output?.[0]?.content?.[0]?.text ||
-      data?.output_text ||
-      "Mr. Wizard is awake, but I didn’t catch that. Please try again.";
+      data.output_text ||
+      (Array.isArray(data.output) &&
+        data.output
+          .flatMap((item) => item?.content || [])
+          .map((c) => c?.text)
+          .filter(Boolean)
+          .join("\n")) ||
+      "Sorry — I didn’t get a response.";
 
     return res.status(200).json({ reply });
   } catch (err) {
+    console.error("Server error:", err);
     return res.status(500).json({
       error: "Server error",
       details: err?.message || String(err),
