@@ -1,7 +1,7 @@
 // pages/api/chat.js
 
 export default async function handler(req, res) {
-  // ---- Health check (browser-safe) ----
+  // Health check
   if (req.method === "GET") {
     return res.status(200).json({
       ok: true,
@@ -10,7 +10,6 @@ export default async function handler(req, res) {
     });
   }
 
-  // ---- Allow POST only ----
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -40,26 +39,21 @@ export default async function handler(req, res) {
           input: [
             {
               role: "system",
-              content: [
-                {
-                  type: "text",
-                  text:
-                    "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. " +
-                    "Speak clearly, warmly, and helpfully.",
-                },
-              ],
+              content:
+                "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and helpfully.",
             },
             {
               role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: message,
-                },
-              ],
+              content: message,
             },
           ],
-          max_output_tokens: 250,
+          output: [
+            {
+              type: "message",
+              role: "assistant",
+            },
+          ],
+          max_output_tokens: 300,
         }),
       }
     );
@@ -68,16 +62,15 @@ export default async function handler(req, res) {
 
     if (!openaiResponse.ok) {
       console.error("OpenAI error:", data);
-      return res.status(openaiResponse.status).json({
+      return res.status(500).json({
         error: "OpenAI request failed",
         details: data,
       });
     }
 
     const reply =
-      data.output_text ||
       data.output?.[0]?.content?.[0]?.text ||
-      "No response";
+      "Mr. Wizard is listening, but something went quiet.";
 
     return res.status(200).json({ reply });
   } catch (err) {
