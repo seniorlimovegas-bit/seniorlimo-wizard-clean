@@ -12,9 +12,9 @@ export default function Home() {
 
     let t = 0;
     const loop = setInterval(() => {
-      t += 0.03;
-      const size = 30 + Math.sin(t) * 12;
-      glow.style.boxShadow = `0 0 ${size}px rgba(96,165,250,0.6)`;
+      t += 0.04;
+      const size = 30 + Math.sin(t) * 14;
+      glow.style.boxShadow = `0 0 ${size}px rgba(96,165,250,0.7)`;
     }, 50);
 
     return () => clearInterval(loop);
@@ -41,15 +41,14 @@ export default function Home() {
               : "IDLE • LISTENING FOR ACTIVATION"}
           </p>
 
-          <button
-            className="activate"
-            onClick={() => setActive(true)}
-            disabled={active}
-          >
-            {active ? "Mr. Wizard Online" : "Activate Mr. Wizard"}
-          </button>
-
-          <p className="footer">© 2026 Mr. Wizard</p>
+          {!active && (
+            <button
+              className="activate"
+              onClick={() => setActive(true)}
+            >
+              Activate Mr. Wizard
+            </button>
+          )}
         </div>
       </div>
     </>
