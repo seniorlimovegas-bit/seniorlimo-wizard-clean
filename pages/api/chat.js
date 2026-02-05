@@ -25,7 +25,7 @@ function extractOutputText(data) {
 }
 
 export default async function handler(req, res) {
-  // ===== Health check (browser-safe) =====
+  // Health check (browser-safe)
   if (req.method === "GET") {
     return res.status(200).json({
       ok: true,
@@ -35,65 +35,56 @@ export default async function handler(req, res) {
     });
   }
 
-  // ===== POST only =====
+  // POST only
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    // Safely parse body (Next can give object OR string)
-    const body =
-      typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
-
-    const message = body?.message;
-
-    if (!message || typeof message !== "string" || !message.trim()) {
+    const { message } = req.body || {};
+    if (!message || typeof message !== "string") {
       return res.status(400).json({ error: "Missing message" });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: "OPENAI_API_KEY is not set in Vercel env vars" });
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: "Missing OPENAI_API_KEY in environment" });
     }
-
-    const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
     const openaiRes = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model,
-        input: message,
+        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        input: [
+          {
+            role: "system",
+            content:
+              "You are Mr. Wizard, a calm, friendly AI-powered concierge for SeniorLimo. Keep replies helpful, short, and clear.",
+          },
+          { role: "user", content: message },
+        ],
       }),
     });
 
-    // IMPORTANT: capture text FIRST so we can show real errors
-    const rawText = await openaiRes.text();
-    let data = null;
-    try {
-      data = rawText ? JSON.parse(rawText) : null;
-    } catch {
-      data = { raw: rawText };
-    }
+    const data = await openaiRes.json();
 
-    // If OpenAI returns error, pass it through verbatim
+    // If OpenAI returned an error, return it cleanly
     if (!openaiRes.ok) {
       return res.status(openaiRes.status).json({
-        error: "OpenAI error",
-        status: openaiRes.status,
+        error: "OpenAI request failed",
         details: data,
       });
     }
 
-    const reply = extractOutputText(data) || "No reply text returned";
+    const reply = extractOutputText(data) || "No reply";
     return res.status(200).json({ reply });
   } catch (err) {
     return res.status(500).json({
       error: "Server exception",
-      details: String(err?.message || err),
+      details: err?.message || String(err),
     });
   }
 }
