@@ -1,56 +1,161 @@
-"use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function Home() {
   const [active, setActive] = useState(false);
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState([
+    { role: "wizard", text: "I am here. Ask when ready." }
+  ]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!active) return;
+  async function sendMessage() {
+    if (!input.trim()) return;
 
-    const glow = document.getElementById("glow");
-    if (!glow) return;
+    const userMessage = { role: "user", text: input };
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
+    setLoading(true);
 
-    let t = 0;
-    const loop = setInterval(() => {
-      t += 0.04;
-      const size = 30 + Math.sin(t) * 14;
-      glow.style.boxShadow = `0 0 ${size}px rgba(96,165,250,0.7)`;
-    }, 50);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: input })
+      });
 
-    return () => clearInterval(loop);
-  }, [active]);
+      const data = await res.json();
+
+      setMessages(prev => [
+        ...prev,
+        { role: "wizard", text: data.reply || "…" }
+      ]);
+    } catch (err) {
+      setMessages(prev => [
+        ...prev,
+        { role: "wizard", text: "Connection failed. Try again." }
+      ]);
+    }
+
+    setLoading(false);
+  }
 
   return (
-    <>
-      <div className="bg" />
-      <div className="stars" />
+    <div style={styles.page}>
+      <div style={styles.card}>
+        <h1 style={styles.title}>Mr. Wizard</h1>
 
-      <div className="container">
-        <div id="glow" className="card">
-          <h1>Mr. Wizard</h1>
-
-          <p className="tag">
-            Your AI-powered concierge, guide, and assistant.
-            <br />
-            Calm. Aware. Waiting.
-          </p>
-
-          <p className="status">
-            {active
-              ? "ACTIVE • AWARE • READY"
-              : "IDLE • LISTENING FOR ACTIVATION"}
-          </p>
-
-          {!active && (
-            <button
-              className="activate"
-              onClick={() => setActive(true)}
-            >
+        {!active ? (
+          <>
+            <p style={styles.subtitle}>
+              Calm. Aware. Waiting.
+            </p>
+            <button style={styles.button} onClick={() => setActive(true)}>
               Activate Mr. Wizard
             </button>
-          )}
-        </div>
+          </>
+        ) : (
+          <>
+            <div style={styles.chat}>
+              {messages.map((m, i) => (
+                <div
+                  key={i}
+                  style={{
+                    ...styles.message,
+                    alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+                    background:
+                      m.role === "user" ? "#2563eb" : "#1f2937"
+                  }}
+                >
+                  {m.text}
+                </div>
+              ))}
+              {loading && (
+                <div style={styles.message}>Thinking…</div>
+              )}
+            </div>
+
+            <div style={styles.inputRow}>
+              <input
+                style={styles.input}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                placeholder="Ask Mr. Wizard…"
+                onKeyDown={e => e.key === "Enter" && sendMessage()}
+              />
+              <button style={styles.send} onClick={sendMessage}>
+                Send
+              </button>
+            </div>
+          </>
+        )}
       </div>
-    </>
+    </div>
   );
 }
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "radial-gradient(circle at center, #0b1220, #000)"
+  },
+  card: {
+    width: "360px",
+    padding: "24px",
+    borderRadius: "16px",
+    background: "rgba(15,23,42,0.9)",
+    boxShadow: "0 0 60px rgba(59,130,246,0.35)",
+    color: "#fff"
+  },
+  title: {
+    textAlign: "center",
+    marginBottom: "8px"
+  },
+  subtitle: {
+    textAlign: "center",
+    opacity: 0.7,
+    marginBottom: "16px"
+  },
+  button: {
+    width: "100%",
+    padding: "12px",
+    borderRadius: "10px",
+    background: "#2563eb",
+    color: "#fff",
+    border: "none",
+    cursor: "pointer"
+  },
+  chat: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    maxHeight: "300px",
+    overflowY: "auto",
+    marginBottom: "12px"
+  },
+  message: {
+    padding: "8px 12px",
+    borderRadius: "10px",
+    maxWidth: "80%"
+  },
+  inputRow: {
+    display: "flex",
+    gap: "8px"
+  },
+  input: {
+    flex: 1,
+    padding: "10px",
+    borderRadius: "8px",
+    border: "none"
+  },
+  send: {
+    padding: "10px 14px",
+    borderRadius: "8px",
+    background: "#2563eb",
+    color: "#fff",
+    border: "none",
+    cursor: "pointer"
+  }
+};
