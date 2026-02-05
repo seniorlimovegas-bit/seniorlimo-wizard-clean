@@ -1,4 +1,4 @@
- // pages/api/chat.js
+// pages/api/chat.js
 
 function extractOutputText(data) {
   // Best-case: Responses API provides output_text
@@ -16,9 +16,7 @@ function extractOutputText(data) {
     if (!Array.isArray(content)) continue;
 
     for (const block of content) {
-      // Common shapes: { type: "output_text", text: "..." }
       if (typeof block?.text === "string") parts.push(block.text);
-      // Sometimes nested: { type: "...", text: { value: "..." } }
       else if (typeof block?.text?.value === "string") parts.push(block.text.value);
     }
   }
@@ -27,7 +25,7 @@ function extractOutputText(data) {
 }
 
 export default async function handler(req, res) {
-  // Health check (safe in browser)
+  // Health check
   if (req.method === "GET") {
     return res.status(200).json({
       ok: true,
@@ -42,13 +40,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Safely parse body
+    // Safely parse body (covers weird cases where body arrives as a string)
     const body =
-      typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+      typeof req.body === "string"
+        ? JSON.parse(req.body || "{}")
+        : req.body || {};
 
     const message = body.message;
 
-    // Validate input
     if (!message || typeof message !== "string" || !message.trim()) {
       return res.status(400).json({ error: "Invalid message payload" });
     }
@@ -58,7 +57,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
     }
 
-    // Call OpenAI Responses API (correct input format)
+    // ✅ Use the safest Responses API input format (structured)
     const openaiResponse = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -76,28 +75,23 @@ export default async function handler(req, res) {
       }),
     });
 
-    // If OpenAI returns an error, surface it clearly
+    const data = await openaiResponse.json().catch(() => ({}));
+
+    // ✅ If OpenAI returns an error, send it back to the UI so we can see it
     if (!openaiResponse.ok) {
-      const errText = await openaiResponse.text();
-      console.log("❌ OpenAI error status:", openaiResponse.status);
-      console.log("❌ OpenAI error body:", errText);
-      return res.status(502).json({
-        error: "OpenAI API error",
+      return res.status(openaiResponse.status).json({
+        error: "OpenAI error",
         status: openaiResponse.status,
-        details: errText,
+        details: data,
       });
     }
 
-    const data = await openaiResponse.json();
-    console.log("✅ OpenAI response:", JSON.stringify(data, null, 2));
-
-    const reply = extractOutputText(data) || "No response text returned.";
+    const reply = extractOutputText(data) || "No response";
     return res.status(200).json({ reply });
   } catch (err) {
-    console.log("🔥 Server exception:", err);
     return res.status(500).json({
-      error: "Server error",
-      details: err?.message || String(err),
+      error: "Server exception",
+      message: err?.message || String(err),
     });
   }
 }
