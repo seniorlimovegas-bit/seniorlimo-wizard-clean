@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   try {
     const { message } = req.body || {};
 
-    if (!message) {
+    if (!message || typeof message !== "string") {
       return res.status(400).json({ error: "No message provided" });
     }
 
@@ -25,31 +25,36 @@ export default async function handler(req, res) {
           {
             role: "system",
             content:
-              "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and helpfully. Short, friendly answers unless more detail is requested.",
+              "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and in short helpful responses. If asked about SeniorLimo or Gold Deals, explain simply and invite a follow-up question.",
           },
-          {
-            role: "user",
-            content: message,
-          },
+          { role: "user", content: message },
         ],
       }),
     });
 
+    // If OpenAI returns an error, pass it back clearly
+    if (!response.ok) {
+      const errText = await response.text();
+      return res.status(500).json({
+        error: "OpenAI request failed",
+        status: response.status,
+        details: errText,
+      });
+    }
+
     const data = await response.json();
 
-    // SAFEST possible reply extraction (covers all known formats)
-    let reply =
-      data?.output_text ||
+    // Safest extraction for Responses API text output
+    const reply =
       data?.output?.[0]?.content?.[0]?.text ||
-      data?.output?.[0]?.content?.find(c => c.type === "output_text")?.text ||
-      "Mr. Wizard is listening, but needs a moment. Please try again.";
+      data?.output_text ||
+      "Mr. Wizard is awake, but I didn’t catch that. Please try again.";
 
     return res.status(200).json({ reply });
-
-  } catch (error) {
-    console.error("Chat API error:", error);
+  } catch (err) {
     return res.status(500).json({
-      reply: "Mr. Wizard encountered a brief issue. Please try again.",
+      error: "Server error",
+      details: err?.message || String(err),
     });
   }
 }
