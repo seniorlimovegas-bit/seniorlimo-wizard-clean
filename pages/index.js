@@ -1,132 +1,145 @@
 "use client";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
+  const [active, setActive] = useState(false);
 
-  const sendMessage = async () => {
-    const text = input.trim();
-    if (!text) return;
-
-    setMessages((m) => [...m, { role: "user", text }]);
-    setInput("");
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
-      });
-
-      const data = await res.json();
-      setMessages((m) => [...m, { role: "assistant", text: data.reply }]);
-    } catch (e) {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", text: "⚠️ Wizard signal disrupted." },
-      ]);
-    }
-  };
+  useEffect(() => {
+    if (!active) return;
+    const glow = document.getElementById("glow");
+    let t = 0;
+    const loop = setInterval(() => {
+      t += 0.03;
+      glow.style.boxShadow = `0 0 ${30 + Math.sin(t) * 10}px rgba(96,165,250,0.6)`;
+    }, 50);
+    return () => clearInterval(loop);
+  }, [active]);
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top, #1b2a4e, #050914)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#fff",
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          width: 420,
-          padding: 24,
-          borderRadius: 20,
-          background: "rgba(10,20,60,0.6)",
-          boxShadow: "0 0 40px rgba(80,120,255,0.4)",
-          textAlign: "center",
-        }}
-      >
-        {/* Crystal Ball */}
-        <div
-          style={{
-            width: 180,
-            height: 180,
-            margin: "0 auto 20px",
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle at 30% 30%, #b7e7ff, #3b6cff, #0a1030)",
-            boxShadow:
-              "0 0 60px rgba(120,180,255,0.9), inset 0 0 40px rgba(255,255,255,0.4)",
-          }}
-        />
+    <>
+      <div className="bg" />
+      <div className="stars" />
+      <div className="container">
+        <div id="glow" className="card">
+          <h1>Mr. Wizard</h1>
+          <p className="tag">
+            Your AI-powered concierge, guide, and assistant.
+          </p>
+          <p className="status">
+            {active ? "ACTIVE • AWARE • READY" : "IDLE • LISTENING FOR ACTIVATION"}
+          </p>
 
-        <h1 style={{ marginBottom: 6 }}>Mr. Wizard</h1>
-        <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 16 }}>
-          Calm. Aware. Waiting.
-        </div>
+          <button onClick={() => setActive(true)}>
+            {active ? "Mr. Wizard Online" : "Activate Mr. Wizard"}
+          </button>
 
-        {/* Chat */}
-        <div
-          style={{
-            minHeight: 160,
-            maxHeight: 200,
-            overflowY: "auto",
-            textAlign: "left",
-            marginBottom: 12,
-          }}
-        >
-          {messages.map((m, i) => (
-            <div key={i} style={{ marginBottom: 8 }}>
-              <strong>
-                {m.role === "user" ? "You" : "Mr. Wizard"}:
-              </strong>{" "}
-              {m.text}
-            </div>
-          ))}
-        </div>
-
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          rows={3}
-          placeholder="Speak to the Wizard…"
-          style={{
-            width: "100%",
-            padding: 10,
-            borderRadius: 10,
-            border: "none",
-            marginBottom: 10,
-          }}
-        />
-
-        <button
-          onClick={sendMessage}
-          style={{
-            width: "100%",
-            padding: "12px 0",
-            borderRadius: 30,
-            border: "none",
-            fontWeight: "bold",
-            background:
-              "linear-gradient(135deg, #4f7cff, #7aa2ff)",
-            color: "#fff",
-            cursor: "pointer",
-          }}
-        >
-          Activate Mr. Wizard
-        </button>
-
-        <div style={{ fontSize: 11, opacity: 0.5, marginTop: 10 }}>
-          © 2026 Mr. Wizard
+          <footer>© 2026 Mr. Wizard · All Rights Reserved</footer>
         </div>
       </div>
-    </div>
+
+      <style jsx>{`
+        body {
+          margin: 0;
+          overflow: hidden;
+          background: #020617;
+        }
+
+        .bg {
+          position: fixed;
+          inset: 0;
+          background: radial-gradient(
+            circle at center,
+            #020617 0%,
+            #000 70%
+          );
+        }
+
+        .stars {
+          position: fixed;
+          inset: 0;
+          background-image: radial-gradient(
+              1px 1px at 20% 30%,
+              rgba(255, 255, 255, 0.6) 50%,
+              transparent 51%
+            ),
+            radial-gradient(
+              1px 1px at 80% 60%,
+              rgba(255, 255, 255, 0.4) 50%,
+              transparent 51%
+            ),
+            radial-gradient(
+              1px 1px at 50% 80%,
+              rgba(255, 255, 255, 0.5) 50%,
+              transparent 51%
+            );
+          animation: drift 60s linear infinite;
+        }
+
+        @keyframes drift {
+          from {
+            transform: translateY(0);
+          }
+          to {
+            transform: translateY(-1000px);
+          }
+        }
+
+        .container {
+          position: fixed;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .card {
+          width: 360px;
+          padding: 28px;
+          border-radius: 18px;
+          background: rgba(15, 23, 42, 0.85);
+          backdrop-filter: blur(14px);
+          text-align: center;
+          color: #e5e7eb;
+          box-shadow: 0 0 40px rgba(59, 130, 246, 0.45);
+        }
+
+        h1 {
+          margin: 0;
+          font-size: 28px;
+          letter-spacing: 0.5px;
+        }
+
+        .tag {
+          margin: 12px 0 18px;
+          font-size: 14px;
+          opacity: 0.9;
+        }
+
+        .status {
+          font-size: 12px;
+          letter-spacing: 1px;
+          margin-bottom: 20px;
+          opacity: 0.7;
+        }
+
+        button {
+          width: 100%;
+          padding: 14px;
+          border-radius: 12px;
+          border: none;
+          background: linear-gradient(135deg, #3b82f6, #60a5fa);
+          color: #020617;
+          font-weight: 600;
+          cursor: pointer;
+          font-size: 15px;
+        }
+
+        footer {
+          margin-top: 18px;
+          font-size: 11px;
+          opacity: 0.4;
+        }
+      `}</style>
+    </>
   );
 }
