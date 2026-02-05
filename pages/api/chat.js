@@ -1,7 +1,7 @@
 // pages/api/chat.js
 
 export default async function handler(req, res) {
-  // Health check
+  // ---- Health check (browser-safe) ----
   if (req.method === "GET") {
     return res.status(200).json({
       ok: true,
@@ -10,6 +10,7 @@ export default async function handler(req, res) {
     });
   }
 
+  // ---- Allow POST only ----
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -42,7 +43,9 @@ export default async function handler(req, res) {
               content: [
                 {
                   type: "text",
-                  text: "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and helpfully.",
+                  text:
+                    "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. " +
+                    "Speak clearly, warmly, and helpfully.",
                 },
               ],
             },
@@ -65,7 +68,10 @@ export default async function handler(req, res) {
 
     if (!openaiResponse.ok) {
       console.error("OpenAI error:", data);
-      return res.status(500).json({ error: "OpenAI request failed" });
+      return res.status(openaiResponse.status).json({
+        error: "OpenAI request failed",
+        details: data,
+      });
     }
 
     const reply =
