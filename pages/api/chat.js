@@ -1,3 +1,5 @@
+// pages/api/chat.js
+
 export default async function handler(req, res) {
   // Allow POST only
   if (req.method !== "POST") {
@@ -23,7 +25,7 @@ export default async function handler(req, res) {
           {
             role: "system",
             content:
-              "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, patiently, and warmly. Be helpful, concise, and reassuring.",
+              "You are Mr. Wizard — the calm, confident AI concierge for SeniorLimo. Speak clearly, warmly, and helpfully. Short, friendly answers unless more detail is requested.",
           },
           {
             role: "user",
@@ -35,13 +37,19 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    const reply =
-      data.output?.[0]?.content?.[0]?.text ||
-      "Mr. Wizard is awake, but didn’t receive a clear response. Please try again.";
+    // SAFEST possible reply extraction (covers all known formats)
+    let reply =
+      data?.output_text ||
+      data?.output?.[0]?.content?.[0]?.text ||
+      data?.output?.[0]?.content?.find(c => c.type === "output_text")?.text ||
+      "Mr. Wizard is listening, but needs a moment. Please try again.";
 
     return res.status(200).json({ reply });
+
   } catch (error) {
     console.error("Chat API error:", error);
-    return res.status(500).json({ error: "Server error" });
+    return res.status(500).json({
+      reply: "Mr. Wizard encountered a brief issue. Please try again.",
+    });
   }
 }
