@@ -1,7 +1,7 @@
 // pages/api/chat.js
 
 export default async function handler(req, res) {
-  // ===== Health check (browser-safe) =====
+  // --- Health check (browser-safe) ---
   if (req.method === "GET") {
     return res.status(200).json({
       ok: true,
@@ -10,16 +10,18 @@ export default async function handler(req, res) {
     });
   }
 
-  // ===== Allow POST only =====
+  // --- POST only ---
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    console.log("🔥 POST /api/chat hit");
+    // Next.js usually parses JSON automatically if Content-Type is application/json
+    // But this keeps it safe if anything comes in as a string.
+    const body =
+      typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
 
-    const { message } = req.body || {};
-    console.log("📩 Incoming message:", message);
+    const message = body.message;
 
     // Validate input
     if (!message || typeof message !== "string" || !message.trim()) {
@@ -31,6 +33,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Missing OPENAI_API_KEY" });
     }
 
+    // Call OpenAI Responses API
     const openaiResponse = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -40,32 +43,31 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         input: message,
-        max_output_tokens: 250,
       }),
     });
 
-    const data = await openaiResponse.json();
-
-    // ✅ IMPORTANT: reveal the real OpenAI error in logs + response
+    // If OpenAI returned an error, forward the real details to the browser
     if (!openaiResponse.ok) {
-      console.log("❌ OpenAI error status:", openaiResponse.status);
-      console.log("❌ OpenAI error body:", data);
+      const errText = await openaiResponse.text(); // raw body for debugging
+      console.error("OpenAI error status:", openaiResponse.status, errText);
       return res.status(openaiResponse.status).json({
         error: "OpenAI request failed",
-        details: data,
+        details: errText,
       });
     }
 
-    console.log("🧠 OpenAI raw response:", data);
+    const data = await openaiResponse.json();
 
+    // Robust reply extraction (covers common response shapes)
     const reply =
       data.output_text ||
-      data.output?.[0]?.content?.[0]?.text ||
+      data?.output?.[0]?.content?.find((c) => c.type === "output_text")?.text ||
+      data?.output?.[0]?.content?.[0]?.text ||
       "No response";
 
     return res.status(200).json({ reply });
   } catch (err) {
-    console.log("💥 Server error:", err);
+    console.error("Server error:", err);
     return res.status(500).json({
       error: "Server error",
       details: String(err?.message || err),
