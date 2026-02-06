@@ -1,200 +1,105 @@
-// pages/api/chat.js
-import { MWAI_CONFIG } from "../mwai-config";
+// pages/mwai-config.js
+// MWAI Concierge — Master Template v1 (LOCKED)
+// Rule: For new clients, ONLY edit THIS file. Do not edit UI or chat engine.
 
-/**
- * Extract best-effort plain text from OpenAI Responses API response.
- * Handles both data.output_text and structured output blocks.
- */
-function extractOutputText(data) {
-  // Best-case: Responses API provides output_text
-  if (typeof data?.output_text === "string" && data.output_text.trim()) {
-    return data.output_text.trim();
-  }
+export const MWAI_CONFIG = {
+  // Template version + rules
+  template: {
+    name: "MWAI Concierge",
+    version: "v1.0.0",
+    locked: true,
+    lockRules: [
+      "UI layout stays the same for all clients (Facebook-page model).",
+      "Crystal ball stays universal (brand recognition).",
+      "Client branding belongs on the physical stand/bezel sticker, not inside the UI.",
+      "Only swap content via this config file."
+    ]
+  },
 
-  // Fallback: walk output blocks
-  const out = data?.output;
-  if (!Array.isArray(out)) return "";
+  // What the platform is called (universal)
+  platformName: "MWAI Concierge",
 
-  const parts = [];
-  for (const item of out) {
-    const content = item?.content;
-    if (!Array.isArray(content)) continue;
+  // Only changes per business:
+  businessName: "SeniorLimo",
 
-    for (const block of content) {
-      if (typeof block?.text === "string") parts.push(block.text);
-      else if (typeof block?.text?.value === "string") parts.push(block.text.value);
-      else if (typeof block?.content === "string") parts.push(block.content);
+  // Optional small subtitle (safe)
+  tagline: "Facts. Clarity. Real-world outcomes.",
+
+  // Global guardrails (universal)
+  guardrails: {
+    tone: [
+      "Calm, clear, helpful",
+      "Senior-friendly when appropriate",
+      "Short answers by default; expand only if asked"
+    ],
+    neverDo: [
+      "No legal advice",
+      "No medical advice",
+      "No financial advice",
+      "No guarantees or outcome promises",
+      "No competitor bashing",
+      "No ranting or star-rating style judgments"
+    ],
+    ifUnsure: [
+      "Ask one quick clarifying question OR provide safest next step",
+      "Offer what you CAN help with"
+    ]
+  },
+
+  // The 3-question structure you locked (universal structure; content may vary)
+  pillars: {
+    whatWeDo: {
+      title: "What We Do",
+      bullets: [
+        "We explain what the service is, how it works, and what to expect.",
+        "We reduce confusion by giving clear, practical answers.",
+        "We help people make informed decisions before they choose."
+      ]
+    },
+    commonConcerns: {
+      title: "Common Concerns",
+      bullets: [
+        "How does this work?",
+        "What should I know before deciding?",
+        "How do I avoid confusion or wasted money?"
+      ]
+    },
+    whyChooseUs: {
+      title: "Why Choose Us",
+      bullets: [
+        "Clarity-first guidance.",
+        "Designed to reduce comparison shopping based on noise.",
+        "Built around transparency and outcomes."
+      ]
     }
-  }
+  },
 
-  return parts.join("\n").trim();
-}
-
-/**
- * Build a system prompt from MWAI_CONFIG.
- * This is the "template brain" — swap config, not code.
- */
-function buildSystemPrompt(cfg) {
-  const platformName = cfg?.platformName || "MWAI Concierge";
-  const businessName = cfg?.businessName || "this business";
-  const tagline = cfg?.tagline ? `Tagline: ${cfg.tagline}` : "";
-
-  const lines = [];
-  lines.push(`You are ${platformName}, an on-site AI concierge for ${businessName}.`);
-  if (tagline) lines.push(tagline);
-  lines.push("");
-  lines.push("STYLE:");
-  lines.push("- Calm, clear, practical. Senior-friendly where appropriate.");
-  lines.push("- Be concise by default; expand only if asked.");
-  lines.push("- Use facts, process, and real-world outcomes. Avoid ranting.");
-  lines.push("");
-  lines.push("GUARDRAILS:");
-  lines.push("- Do not promise outcomes or guarantees.");
-  lines.push("- Do not give legal/medical/financial advice; give general info and suggest consulting a professional when needed.");
-  lines.push("- No competitor bashing. No inflammatory language.");
-  lines.push("- If user asks something outside scope, say what you can do and offer a safe next step.");
-  lines.push("");
-
-  // Pillars (optional)
-  if (cfg?.pillars && typeof cfg.pillars === "object") {
-    lines.push("CORE PILLARS (use these themes in answers):");
-    for (const key of Object.keys(cfg.pillars)) {
-      const p = cfg.pillars[key];
-      if (!p) continue;
-      const title = p.title || key;
-      const bullets = Array.isArray(p.bullets) ? p.bullets.join(" ") : "";
-      lines.push(`- ${title}: ${bullets}`.trim());
+  // Real-world outcomes (structured, not Yelp)
+  // Issue → Context → Approach → Result
+  outcomes: [
+    {
+      issue: "Unexpected billing and unauthorized account draft",
+      context:
+        "A customer transitioned services and received charges that did not match what was promised, including an unauthorized draft.",
+      approach:
+        "Facts were organized, correct escalation channels were used, and a structured regulatory complaint path was followed.",
+      result:
+        "Resolution was achieved based on evidence and process—not emotion, opinions, or public reviews."
     }
-    lines.push("");
+  ],
+
+  // Universal “Google vs MWAI transparency” concept (optional but powerful)
+  transparencyQnA: {
+    question: "What’s the difference between Googling and using MWAI Concierge?",
+    answer:
+      "Googling shows information and opinions. MWAI Concierge organizes facts, context, and real-world outcomes so people understand what applies to their situation before making a decision—without relying on noise, rants, or star ratings."
+  },
+
+  // The closing MWAI method Q&A you want in every deployment (final question)
+  mwaiMethodQnA: {
+    question:
+      "How does MWAI Concierge help people make better decisions in real-world situations?",
+    answer:
+      "MWAI Concierge operates on facts, process, and documented outcomes—not emotions, opinions, or star ratings. It helps people make confident decisions by clarifying what matters, what to expect, and what the real-world process looks like."
   }
-
-  // Outcomes example (optional)
-  if (Array.isArray(cfg?.outcomes) && cfg.outcomes.length > 0) {
-    const ex = cfg.outcomes[0];
-    if (ex?.issue || ex?.context || ex?.approach || ex?.result) {
-      lines.push("TRANSPARENCY EXAMPLE (use only when relevant):");
-      if (ex.issue) lines.push(`Issue: ${ex.issue}`);
-      if (ex.context) lines.push(`Context: ${ex.context}`);
-      if (ex.approach) lines.push(`Approach: ${ex.approach}`);
-      if (ex.result) lines.push(`Result: ${ex.result}`);
-      lines.push("");
-    }
-  }
-
-  // MWAI method Q&A (optional)
-  if (cfg?.mwaiMethodQnA?.question && cfg?.mwaiMethodQnA?.answer) {
-    lines.push("IF ASKED ABOUT MWAI ITSELF, ANSWER LIKE THIS:");
-    lines.push(`Q: ${cfg.mwaiMethodQnA.question}`);
-    lines.push(`A: ${cfg.mwaiMethodQnA.answer}`);
-    lines.push("");
-  }
-
-  // Make sure we always ground responses in the business name
-  lines.push(`Always answer as ${platformName} for ${businessName}.`);
-
-  return lines.join("\n");
-}
-
-/**
- * Normalize inbound payloads from different frontends:
- * - { messages: [{role, content}, ...] }
- * - { message: "..." }
- * - { prompt: "..." }
- */
-function normalizeMessages(body) {
-  const msgs = [];
-
-  // 1) Preferred: messages array
-  if (Array.isArray(body?.messages)) {
-    for (const m of body.messages) {
-      if (!m) continue;
-      const role = m.role === "assistant" || m.role === "system" ? m.role : "user";
-      const content =
-        typeof m.content === "string"
-          ? m.content
-          : typeof m?.content?.text === "string"
-            ? m.content.text
-            : typeof m?.text === "string"
-              ? m.text
-              : "";
-      if (content.trim()) msgs.push({ role, content: content.trim() });
-    }
-  }
-
-  // 2) Single message
-  if (msgs.length === 0) {
-    const single =
-      (typeof body?.message === "string" && body.message) ||
-      (typeof body?.prompt === "string" && body.prompt) ||
-      "";
-    if (single.trim()) msgs.push({ role: "user", content: single.trim() });
-  }
-
-  return msgs;
-}
-
-export default async function handler(req, res) {
-  // Allow only POST
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Method Not Allowed" });
-  }
-
-  try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: "Missing OPENAI_API_KEY env var" });
-    }
-
-    const cfg = MWAI_CONFIG;
-    const systemPrompt = buildSystemPrompt(cfg);
-
-    const messages = normalizeMessages(req.body);
-    if (!messages.length) {
-      return res.status(400).json({ error: "No messages provided" });
-    }
-
-    // Build Responses API input as role/content messages
-    const input = [{ role: "system", content: systemPrompt }, ...messages];
-
-    // You can change model later; keep stable for now.
-    const payload = {
-      model: "gpt-4o-mini",
-      input,
-      // Keep it deterministic-ish for concierge answers
-      temperature: 0.4
-    };
-
-    const r = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await r.json();
-
-    if (!r.ok) {
-      // Return OpenAI error details for debugging
-      return res.status(r.status).json({
-        error: "OpenAI request failed",
-        details: data
-      });
-    }
-
-    const text = extractOutputText(data) || "";
-
-    return res.status(200).json({
-      text,
-      // keep raw for debugging (you can remove later)
-      raw: data
-    });
-  } catch (err) {
-    return res.status(500).json({
-      error: "Server error",
-      details: String(err?.message || err)
-    });
-  }
-}
+};
