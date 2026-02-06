@@ -4,14 +4,11 @@ import { useEffect, useRef, useState } from "react";
 
 export default function Home() {
   const [active, setActive] = useState(false);
-  const [input, setInput] = useState("");
   const [messages, setMessages] = useState([
-    { role: "wizard", text: "I am here. Click Activate to begin." },
+    { role: "wizard", text: "I am here. Tap the crystal to begin." },
   ]);
-  const [loading, setLoading] = useState(false);
 
-  // ---- Speech / Voice ----
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  // ----- Voice -----
   const synthRef = useRef(null);
   const voicesRef = useRef([]);
 
@@ -22,158 +19,132 @@ export default function Home() {
     synthRef.current = window.speechSynthesis;
 
     const loadVoices = () => {
-      try {
-        voicesRef.current = window.speechSynthesis.getVoices() || [];
-      } catch (e) {
-        // ignore
-      }
+      voicesRef.current = window.speechSynthesis.getVoices();
     };
 
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
-
-    return () => {
-      try {
-        window.speechSynthesis.onvoiceschanged = null;
-      } catch (e) {
-        // ignore
-      }
-    };
   }, []);
 
-  function pickVoice() {
-    const voices = voicesRef.current || [];
-    if (!voices.length) return null;
+  const speak = (text) => {
+    if (!synthRef.current) return;
 
-    // Prefer English voices
-    const en = voices.filter((v) => (v.lang || "").toLowerCase().startsWith("en"));
-    const pool = en.length ? en : voices;
+    synthRef.current.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
 
-    // Prefer Siri-ish / enhanced voices if present
-    const preferred = pool.find((v) =>
-      /siri|enhanced|premium|natural/i.test(v.name || "")
+    const preferred = voicesRef.current.find(v =>
+      v.name.toLowerCase().includes("female") ||
+      v.name.toLowerCase().includes("samantha") ||
+      v.name.toLowerCase().includes("zira")
     );
-    return preferred || pool[0] || null;
-  }
 
-  function speak(text) {
-    if (!voiceEnabled) return;
-    if (typeof window === "undefined") return;
-    if (!window.speechSynthesis) return;
+    if (preferred) utterance.voice = preferred;
+    utterance.rate = 0.95;
+    utterance.pitch = 1.05;
 
-    try {
-      const synth = window.speechSynthesis;
-      const utter = new SpeechSynthesisUtterance(text);
+    synthRef.current.speak(utterance);
+  };
 
-      const v = pickVoice();
-      if (v) utter.voice = v;
+  const handleActivateClick = () => {
+    if (active) return;
 
-      utter.rate = 0.95;
-      utter.pitch = 1.0;
-
-      synth.cancel();
-      synth.speak(utter);
-    } catch (e) {
-      // If speech fails, we just fall back to text
-      console.log("Speech error:", e);
-    }
-  }
-
-  async function sendMessage() {
-    const text = input.trim();
-    if (!text || loading) return;
-
-    setMessages((prev) => [...prev, { role: "user", text }]);
-    setInput("");
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      // Accept several possible shapes so we don’t break:
-      const reply =
-        data.reply ||
-        data.text ||
-        data.message ||
-        (data.output && data.output[0] && data.output[0].content && data.output[0].content[0] && data.output[0].content[0].text) ||
-        "I received your message, but I did not get a reply back.";
-
-      setMessages((prev) => [...prev, { role: "wizard", text: reply }]);
-
-      // Speak Wizard reply (works AFTER Activate unlock)
-      speak(reply);
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "wizard", text: "Network error. Please try again." },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleKeyDown(e) {
-    if (e.key === "Enter") sendMessage();
-  }
-
-  // IMPORTANT: iOS requires speech to be triggered inside a user click.
-  function handleActivateClick() {
     setActive(true);
-
-    // This line "unlocks" speech on iPhone/iPad for the session:
-    speak("Hello. I am Mr. Wizard. How may I help you today?");
-  }
+    const greeting = "Greetings. I am Mr. Wizard. Ask me anything.";
+    setMessages(m => [...m, { role: "wizard", text: greeting }]);
+    speak(greeting);
+  };
 
   return (
-    <div style={{ padding: 24, fontFamily: "Arial, sans-serif" }}>
-      <h1 style={{ fontSize: 48, margin: "10px 0 20px" }}>SeniorLimo – Mr. Wizard</h1>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "radial-gradient(circle at top, #0b1c2d, #05080f)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#fff",
+        fontFamily: "Arial, sans-serif",
+        overflow: "hidden",
+      }}
+    >
+      {/* Title */}
+      <h1 style={{ marginBottom: 20 }}>SeniorLimo – Mr. Wizard</h1>
 
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
-        <button onClick={handleActivateClick} disabled={active} style={{ padding: "6px 12px" }}>
-          {active ? "Activated" : "Activate"}
+      {/* Crystal Ball Area */}
+      <div style={{ position: "relative", width: 320, height: 420 }}>
+        {/* Mystic Fog */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 60,
+            left: 0,
+            right: 0,
+            height: 120,
+            background:
+              "radial-gradient(circle, rgba(200,220,255,0.35), transparent 70%)",
+            filter: "blur(18px)",
+            animation: "fog 6s ease-in-out infinite",
+            zIndex: 1,
+          }}
+        />
+
+        {/* Crystal Ball Image */}
+        <img
+          src="/crystal-ball.png"
+          alt="Crystal Ball"
+          style={{
+            width: "100%",
+            position: "relative",
+            zIndex: 2,
+          }}
+        />
+
+        {/* Tap & Speak Button */}
+        <button
+          onClick={handleActivateClick}
+          disabled={active}
+          style={{
+            position: "absolute",
+            bottom: 10,
+            left: "50%",
+            transform: "translateX(-50%)",
+            padding: "14px 28px",
+            borderRadius: 30,
+            border: "none",
+            background: "linear-gradient(135deg, #d4af37, #f5d76e)",
+            color: "#000",
+            fontSize: 18,
+            fontWeight: "bold",
+            cursor: active ? "default" : "pointer",
+            zIndex: 3,
+            boxShadow: "0 0 20px rgba(212,175,55,0.7)",
+          }}
+        >
+          {active ? "Listening…" : "Tap & Speak"}
         </button>
-
-        <label style={{ display: "flex", alignItems: "center", gap: 8, userSelect: "none" }}>
-          <input
-            type="checkbox"
-            checked={voiceEnabled}
-            onChange={(e) => setVoiceEnabled(e.target.checked)}
-          />
-          Voice
-        </label>
       </div>
 
-      <div style={{ marginBottom: 16 }}>
+      {/* Helper Text */}
+      <p style={{ marginTop: 20, opacity: 0.8 }}>
+        Ask me anything…
+      </p>
+
+      {/* Hidden message store (kept for future expansion) */}
+      <div style={{ display: "none" }}>
         {messages.map((m, i) => (
-          <div key={i} style={{ margin: "10px 0" }}>
-            <b>{m.role === "wizard" ? "Wizard" : "You"}:</b> {m.text}
-          </div>
+          <div key={i}>{m.text}</div>
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 10, maxWidth: 700 }}>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={active ? "Type your message..." : "Click Activate first..."}
-          disabled={!active || loading}
-          style={{ flex: 1, padding: 10, fontSize: 16 }}
-        />
-        <button
-          onClick={sendMessage}
-          disabled={!active || loading || !input.trim()}
-          style={{ padding: "10px 14px" }}
-        >
-          {loading ? "..." : "Send"}
-        </button>
-      </div>
+      {/* Fog animation */}
+      <style>{`
+        @keyframes fog {
+          0% { opacity: 0.3; transform: translateY(0); }
+          50% { opacity: 0.6; transform: translateY(-10px); }
+          100% { opacity: 0.3; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
