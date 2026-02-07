@@ -6,9 +6,9 @@ export default function Home() {
   const [animKey, setAnimKey] = useState(0);
 
   const handleTap = () => {
-    // switch to gold immediately
+    // Switch to gold immediately
     setGlow("gold");
-    // restart the pulse animation each tap
+    // Restart pulse animation each tap
     setAnimKey((k) => k + 1);
   };
 
@@ -21,126 +21,87 @@ export default function Home() {
   const styles = useMemo(() => {
     const isGold = glow === "gold";
 
+    const blueGlow = "0 0 28px rgba(41, 38, 239, 0.45), 0 0 90px rgba(41, 38, 239, 0.18)";
+    const goldGlow = "0 0 28px rgba(194, 139, 0, 0.55), 0 0 90px rgba(194, 139, 0, 0.22)";
+
     return {
       page: {
         height: "100vh",
-        width: "100vw",
+        width: "100%",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background:
-          "radial-gradient(1200px 800px at 50% 55%, rgba(50,70,110,0.35) 0%, rgba(8,10,16,1) 45%, rgba(0,0,0,1) 100%)",
-        color: "#fff",
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-        userSelect: "none",
-        WebkitUserSelect: "none",
-        touchAction: "manipulation",
+        background: "radial-gradient(ellipse at center, #0b1220 0%, #05070d 60%, #02030a 100%)",
+        overflow: "hidden",
+        WebkitTapHighlightColor: "transparent",
       },
-
       ballWrapper: {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 16,
+        gap: 14,
       },
-
-      ballButton: {
-        border: "none",
-        background: "transparent",
-        padding: 0,
+      crystalBall: {
+        width: 260,
+        height: 260,
+        borderRadius: "50%",
+        backgroundImage: "url(/crystal-ball.png)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        boxShadow: isGold ? goldGlow : blueGlow,
+        transform: "translateZ(0)",
         cursor: "pointer",
         outline: "none",
-        WebkitTapHighlightColor: "transparent",
+        border: isGold ? "1px solid rgba(194, 139, 0, 0.35)" : "1px solid rgba(41, 38, 239, 0.25)",
+        animation: `mwPulse 900ms ease-out 1`,
       },
-
-      ballGlow: {
-        width: 240,
-        height: 240,
-        borderRadius: "50%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-
-        // the animated “aura”
-        boxShadow: isGold
-          ? "0 0 18px rgba(194,139,0,0.55), 0 0 55px rgba(194,139,0,0.35), 0 0 120px rgba(194,139,0,0.22)"
-          : "0 0 18px rgba(41,38,239,0.55), 0 0 55px rgba(41,38,239,0.35), 0 0 120px rgba(41,38,239,0.22)",
-
-        // subtle ring
-        border: isGold
-          ? "1px solid rgba(194,139,0,0.28)"
-          : "1px solid rgba(120,160,255,0.18)",
-
-        // smooth color shift
-        transition: "box-shadow 250ms ease, border 250ms ease",
-
-        // pulse only when gold is active
-        animation: isGold ? "mwPulse 900ms ease-in-out 1" : "none",
-      },
-
-      ballImage: {
-        width: 210,
-        height: 210,
-        borderRadius: "50%",
-        objectFit: "cover",
-        filter: isGold
-          ? "saturate(1.15) brightness(1.05)"
-          : "saturate(1.05) brightness(1.0)",
-        transition: "filter 250ms ease",
-      },
-
       label: {
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
         fontSize: 18,
         letterSpacing: 0.2,
-        opacity: 0.95,
-        color: isGold ? "#C28B00" : "#d7d9ff",
+        color: isGold ? "#C28B00" : "#b6c2ff",
         textShadow: isGold
-          ? "0 0 10px rgba(194,139,0,0.25)"
-          : "0 0 10px rgba(41,38,239,0.18)",
-        transition: "color 250ms ease, text-shadow 250ms ease",
-      },
-
-      hint: {
-        marginTop: 2,
-        fontSize: 12,
-        opacity: 0.55,
+          ? "0 0 18px rgba(194, 139, 0, 0.20)"
+          : "0 0 18px rgba(41, 38, 239, 0.18)",
+        userSelect: "none",
       },
     };
-  }, [glow]);
+  }, [glow, animKey]);
 
   return (
     <div style={styles.page}>
-      {/* Keyframes embedded right here so we don't touch other files */}
-      <style>{`
+      {/* Keyframes are injected safely (no window usage, no build issues) */}
+      <style jsx global>{`
         @keyframes mwPulse {
-          0%   { transform: scale(1);   filter: brightness(1); }
-          45%  { transform: scale(1.03); filter: brightness(1.08); }
-          100% { transform: scale(1);   filter: brightness(1); }
+          0% {
+            transform: scale(1);
+            filter: saturate(1);
+          }
+          35% {
+            transform: scale(1.03);
+            filter: saturate(1.1);
+          }
+          100% {
+            transform: scale(1);
+            filter: saturate(1);
+          }
         }
       `}</style>
 
       <div style={styles.ballWrapper}>
-        <button
-          type="button"
+        <div
+          key={animKey} // forces animation restart
+          style={styles.crystalBall}
+          role="button"
+          tabIndex={0}
+          aria-label="Tap to Speak"
           onClick={handleTap}
-          style={styles.ballButton}
-          aria-label="Tap the crystal ball"
-        >
-          <div key={animKey} style={styles.ballGlow}>
-            <img
-              src="/crystal-ball.png"
-              alt="Crystal ball"
-              style={styles.ballImage}
-              draggable={false}
-            />
-          </div>
-        </button>
-
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") handleTap();
+          }}
+        />
         <div style={styles.label}>Tap to Speak</div>
-        <div style={styles.hint}>
-          (Visual test: tap = gold glow, then back to blue)
-        </div>
       </div>
     </div>
   );
