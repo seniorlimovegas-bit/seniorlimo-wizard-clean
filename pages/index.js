@@ -14,7 +14,7 @@ export default function Home() {
   };
 
   return (
-    <div style={{ padding: 40, fontFamily: "Arial" }}>
+    <div style={{ padding: 40, fontFamily: "Arial", textAlign: "center" }}>
       <h1>SeniorLimo – Mr. Wizard</h1>
 
       <CrystalBall
