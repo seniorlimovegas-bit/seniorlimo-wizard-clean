@@ -2,25 +2,43 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function Home() {
+  // glow mode
   const [glow, setGlow] = useState("blue"); // "blue" | "gold"
-  const [animKey, setAnimKey] = useState(0);
   const backTimerRef = useRef(null);
 
-  const BLUE = "rgba(41, 38, 239, 1)"; // #2926EF
-  const GOLD = "rgba(194, 139, 0, 1)"; // #C28B00
-
-  const triggerGoldFlash = () => {
-    // Cancel any previous timer so repeated taps feel responsive
-    if (backTimerRef.current) clearTimeout(backTimerRef.current);
-
-    setGlow("gold");
-    setAnimKey((k) => k + 1);
-
-    backTimerRef.current = setTimeout(() => {
-      setGlow("blue");
-    }, 900);
+  // OPTIONAL: if you already have voice logic, wire it here.
+  // Example: const startVoice = () => { ... };
+  // For now we keep it safe.
+  const startVoiceIfAvailable = () => {
+    // If you later attach a global or imported function, call it here.
+    // Example:
+    // if (typeof window !== "undefined" && typeof window.__startVoice === "function") {
+    //   window.__startVoice();
+    // }
   };
 
+  const triggerGoldFlash = () => {
+    // Hard proof the tap fired
+    if (typeof document !== "undefined") {
+      document.title = "TAPPED " + new Date().toLocaleTimeString();
+    }
+
+    // Cancel prior timer so repeated taps feel responsive
+    if (backTimerRef.current) clearTimeout(backTimerRef.current);
+
+    // Flash gold
+    setGlow("gold");
+
+    // Go back to blue shortly after
+    backTimerRef.current = setTimeout(() => {
+      setGlow("blue");
+    }, 650);
+
+    // Start voice ONLY from a user gesture (this tap)
+    startVoiceIfAvailable();
+  };
+
+  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (backTimerRef.current) clearTimeout(backTimerRef.current);
@@ -28,149 +46,111 @@ export default function Home() {
   }, []);
 
   const styles = useMemo(() => {
+    // Brand colors
+    const BLUE = "rgba(41, 38, 239, 1)"; // #2926EF
+    const GOLD = "rgba(194, 139, 0, 1)"; // #C28B00
+
     const isGold = glow === "gold";
 
-    const ringShadowBlue = `0 0 28px rgba(41, 38, 239, 0.55), 0 0 110px rgba(41, 38, 239, 0.25)`;
-    const ringShadowGold = `0 0 28px rgba(194, 139, 0, 0.60), 0 0 110px rgba(194, 139, 0, 0.28)`;
-
-    const ringShadow = isGold ? ringShadowGold : ringShadowBlue;
-
-    // Sphere gradients (looks like a glass ball)
-    const sphereBg = isGold
-      ? `radial-gradient(circle at 35% 30%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 18%, rgba(194,139,0,0.75) 55%, rgba(90,55,0,0.85) 100%)`
-      : `radial-gradient(circle at 35% 30%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 18%, rgba(41,38,239,0.78) 55%, rgba(10,18,90,0.88) 100%)`;
-
-    const labelColor = isGold ? GOLD : "rgba(194, 139, 0, 0.95)"; // keep gold label vibe
+    const blueGlow = "0 0 28px rgba(41, 38, 239, 0.55), 0 0 95px rgba(41, 38, 239, 0.22)";
+    const goldGlow = "0 0 28px rgba(194, 139, 0, 0.65), 0 0 95px rgba(194, 139, 0, 0.25)";
 
     return {
       page: {
         minHeight: "100vh",
-        width: "100%",
-        margin: 0,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background:
-          "radial-gradient(1200px 800px at 50% 55%, rgba(20,24,40,0.55) 0%, rgba(8,10,16,1) 60%, rgba(0,0,0,1) 100%)",
-        fontFamily:
-          'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
-        padding: "24px",
-        boxSizing: "border-box",
+        background: "radial-gradient(circle at 50% 30%, #0b1220 0%, #05070d 60%, #000 100%)",
+        color: "#fff",
+        touchAction: "manipulation", // helps iOS with taps
+        WebkitTapHighlightColor: "transparent",
       },
 
-      wrap: {
+      // Clickable area must be a real control on iOS
+      button: {
+        appearance: "none",
+        border: "none",
+        background: "transparent",
+        padding: 0,
+        margin: 0,
+        cursor: "pointer",
+        outline: "none",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: "18px",
-        userSelect: "none",
-        WebkitUserSelect: "none",
+        gap: 14,
+        zIndex: 5,
+        position: "relative",
+        pointerEvents: "auto",
       },
 
-      // Real button so iPad Safari always treats it as tappable
-      ballButton: {
-        width: "220px",
-        height: "220px",
-        borderRadius: "999px",
-        border: "0",
-        outline: "none",
-        padding: 0,
-        background: "transparent",
-        WebkitTapHighlightColor: "transparent",
-        touchAction: "manipulation",
-        cursor: "pointer",
+      ballWrap: {
+        width: 220,
+        height: 220,
+        borderRadius: 999,
         display: "grid",
         placeItems: "center",
+        boxShadow: isGold ? goldGlow : blueGlow,
+        transition: "box-shadow 180ms ease, transform 180ms ease",
+        transform: isGold ? "scale(1.03)" : "scale(1.0)",
+        pointerEvents: "auto",
       },
 
-      sphere: {
-        width: "220px",
-        height: "220px",
-        borderRadius: "999px",
-        background: sphereBg,
-        boxShadow: ringShadow,
-        position: "relative",
-        transform: "translateZ(0)",
-        animation: `pulse 1.1s ease-in-out`,
-      },
-
-      // A soft inner rim to make it feel “3D”
-      innerRim: {
-        position: "absolute",
-        inset: "10px",
-        borderRadius: "999px",
-        boxShadow: isGold
-          ? "inset 0 0 18px rgba(255, 230, 170, 0.18)"
-          : "inset 0 0 18px rgba(170, 190, 255, 0.16)",
-        pointerEvents: "none",
-      },
-
-      // A highlight “shine”
-      shine: {
-        position: "absolute",
-        width: "95px",
-        height: "95px",
-        left: "28px",
-        top: "26px",
-        borderRadius: "999px",
-        background:
-          "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.12) 60%, rgba(255,255,255,0) 100%)",
-        filter: "blur(0.2px)",
-        pointerEvents: "none",
+      ball: {
+        width: 190,
+        height: 190,
+        borderRadius: 999,
+        background: isGold
+          ? `radial-gradient(circle at 30% 28%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.12) 25%, rgba(0,0,0,0) 45%),
+             radial-gradient(circle at 50% 70%, ${GOLD} 0%, rgba(120, 80, 0, 1) 55%, rgba(10, 8, 3, 1) 100%)`
+          : `radial-gradient(circle at 30% 28%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.12) 25%, rgba(0,0,0,0) 45%),
+             radial-gradient(circle at 50% 70%, ${BLUE} 0%, rgba(12, 25, 130, 1) 55%, rgba(5, 8, 18, 1) 100%)`,
+        transition: "background 180ms ease",
       },
 
       label: {
-        fontSize: "18px",
-        letterSpacing: "0.3px",
-        color: labelColor,
-        opacity: 0.95,
-        textShadow: "0 2px 14px rgba(0,0,0,0.55)",
+        fontSize: 18,
+        letterSpacing: "0.5px",
+        color: "rgba(194, 139, 0, 0.95)",
+        userSelect: "none",
       },
 
-      hint: {
-        fontSize: "13px",
-        color: "rgba(255,255,255,0.38)",
-        marginTop: "-10px",
+      tiny: {
+        marginTop: 6,
+        fontSize: 12,
+        opacity: 0.55,
+        userSelect: "none",
       },
-
-      // Inject keyframes
-      keyframes: `
-        @keyframes pulse {
-          0%   { transform: scale(1); }
-          45%  { transform: scale(1.02); }
-          100% { transform: scale(1); }
-        }
-      `,
     };
   }, [glow]);
 
-  return (
-    <>
-      <style>{styles.keyframes}</style>
-      <div style={styles.page}>
-        <div style={styles.wrap}>
-          <button
-            type="button"
-            style={styles.ballButton}
-            // iPad/mobile-friendly: pointer + touch + click (belt and suspenders)
-            onPointerDown={triggerGoldFlash}
-            onTouchStart={(e) => {
-              e.preventDefault(); // prevents “ghost click” / weird delays on iOS
-              triggerGoldFlash();
-            }}
-            onClick={triggerGoldFlash}
-            aria-label="Tap to Speak"
-          >
-            <div key={animKey} style={styles.sphere}>
-              <div style={styles.innerRim} />
-              <div style={styles.shine} />
-            </div>
-          </button>
+  // A single unified handler we can bind to multiple events
+  const handleGesture = (e) => {
+    // IMPORTANT: on iOS, preventDefault on touch can help stop weird delays,
+    // but don't do it on click.
+    if (e?.type === "touchstart") e.preventDefault();
+    triggerGoldFlash();
+  };
 
-          <div style={styles.label}>Tap to Speak</div>
-          <div style={styles.hint}>Ball should flash Gold, then return Blue.</div>
+  return (
+    <div style={styles.page}>
+      <button
+        type="button"
+        aria-label="Tap to speak"
+        style={styles.button}
+        onPointerDown={handleGesture}
+        onTouchStart={handleGesture}
+        onMouseDown={handleGesture}
+        onClick={handleGesture}
+      >
+        <div style={styles.ballWrap}>
+          <div style={styles.ball} />
         </div>
-      </div>
-    </>
+
+        <div style={styles.label}>Tap to Speak</div>
+        <div style={styles.tiny}>(If the tab title changes, tap is working)</div>
+      </button>
+    </div>
   );
 }
